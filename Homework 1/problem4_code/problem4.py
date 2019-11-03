@@ -25,6 +25,7 @@ def build_dist(P):
         norm = 0 
         eps = 1e-7
         for key, value in P.items():
+            assert value >= 0
             norm += value
         assert norm > 1 - eps and norm < 1 + eps
 
@@ -36,21 +37,42 @@ def build_dist(P):
     sanity_check(P)
     return P
 
-def calc_variation_dist(P, Q):
+def calc_variational_dist(P, Q):
     dist = []
     for key in P.keys():
         dist.append(np.abs(P[key] - Q[key]))
     return 0.5 * np.sum(dist)
 
-langs = ['eng', 'esp', 'fin','ger', 'ita']
+
+
+langs = ['eng', 'esp', 'fin','ger', 'ita', 'cip']
 P = dict()
 for lang in langs:
-    with open('Alice_%s.txt' % lang) as f:
-        P[lang] = count_freq(f)
+    if lang != 'cip':
+        with open('Alice_%s.txt' % lang) as f:
+            P[lang] = count_freq(f)
+    else:
+        with open('permuted_cipher.txt') as f:
+            P[lang] = count_freq(f)
     P[lang] = build_dist(P[lang])
 var_distance = pd.DataFrame(index=langs, columns=langs)
 for lang1 in langs:
     for lang2 in langs:
-        var_distance.loc[lang1, lang2] = calc_variation_dist(P[lang1], P[lang2])
+        var_distance.loc[lang1, lang2] = calc_variational_dist(P[lang1], P[lang2])
 
-print(var_distance[0:-1])
+print('Variational Distances:\n', var_distance)
+
+def calc_coll_prob(P):
+    dist = []
+    for key in P.keys():
+        dist.append(P[key])
+    return np.linalg.norm(dist)**2
+
+coll_probs = pd.DataFrame(index=langs)
+for lang in langs:
+    coll_probs.loc[lang, 'value'] = calc_coll_prob(P[lang])
+
+print('\n\nCollision Probabilities:\n', coll_probs)
+
+
+
